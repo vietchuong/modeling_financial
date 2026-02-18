@@ -4,8 +4,13 @@ const state = {
     results: {},
     charts: {
         dcf: null,
-        mc: null
-    }
+        mc: null,
+        profitTrend: null,
+        bsRatios: null,
+        radar: null,
+    },
+    currentTab: 'valuation',
+    ratiosAllYears: null,
 };
 
 // --- DOM Elements ---
@@ -78,7 +83,56 @@ function animateValue(element) {
     element.classList.add('animate-value');
 }
 
-// --- Core DCF Logic ---
+// ============================
+// TAB SWITCHING
+// ============================
+window.switchAnalysisTab = function (tabId) {
+    state.currentTab = tabId;
+
+    // Update tab buttons
+    document.querySelectorAll('.analysis-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabId);
+    });
+
+    // Update tab slider
+    updateAnalysisTabSlider(tabId);
+
+    // Show/hide panels
+    document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.remove('active-panel');
+    });
+    const target = document.getElementById('tab-' + tabId);
+    if (target) {
+        target.classList.add('active-panel');
+    }
+
+    // Render tab content if needed
+    if (tabId === 'analysis' && !state._analysisRendered) {
+        renderAnalysisTab();
+        state._analysisRendered = true;
+    }
+    if (tabId === 'health' && !state._healthRendered) {
+        renderHealthTab();
+        state._healthRendered = true;
+    }
+};
+
+function updateAnalysisTabSlider(tabId) {
+    const tabs = document.querySelectorAll('.analysis-tab');
+    const slider = document.getElementById('analysis-tab-slider');
+    if (!slider) return;
+
+    tabs.forEach(tab => {
+        if (tab.dataset.tab === tabId) {
+            slider.style.width = tab.offsetWidth + 'px';
+            slider.style.left = tab.offsetLeft + 'px';
+        }
+    });
+}
+
+// ============================
+// CORE DCF LOGIC (unchanged)
+// ============================
 function calculateDCF(inputOverrides = {}) {
     const config = { ...state.assumptions, ...inputOverrides };
 
@@ -144,8 +198,7 @@ function calculateDCF(inputOverrides = {}) {
     };
 }
 
-// --- Simulations ---
-
+// --- Monte Carlo ---
 function runMonteCarlo() {
     const iterations = 1000;
     const prices = [];
@@ -224,14 +277,12 @@ function renderSensitivity() {
             const price = res.sharePrice * 1000;
             const pctDiff = (price - basePrice) / basePrice;
 
-            // Determine heat class
             let heatClass = 'heat-neutral';
             if (pctDiff > 0.08) heatClass = 'heat-strong-up';
             else if (pctDiff > 0.03) heatClass = 'heat-up';
             else if (pctDiff < -0.08) heatClass = 'heat-strong-down';
             else if (pctDiff < -0.03) heatClass = 'heat-down';
 
-            // Mark base case (both offsets are 0)
             const isBase = (w === 0 && g === 0);
             const baseClass = isBase ? ' heat-base-case' : '';
 
@@ -243,12 +294,11 @@ function renderSensitivity() {
 }
 
 // --- UI Updates ---
-
 function updateCharts(res, mcRes) {
     const labels = res.projections.map(p => p.year);
     const data = res.projections.map(p => p.fcf);
 
-    // DCF Chart with gradient
+    // DCF Chart
     if (state.charts.dcf) state.charts.dcf.destroy();
 
     const dcfGradient = els.charts.dcfCtx.createLinearGradient(0, 0, 0, 300);
@@ -272,10 +322,7 @@ function updateCharts(res, mcRes) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: {
-                duration: 600,
-                easing: 'easeOutQuart'
-            },
+            animation: { duration: 600, easing: 'easeOutQuart' },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -310,15 +357,12 @@ function updateCharts(res, mcRes) {
         }
     });
 
-    // Monte Carlo Chart with gradient + mean line
+    // Monte Carlo Chart
     if (state.charts.mc) state.charts.mc.destroy();
 
     const mcGradient = els.charts.mcCtx.createLinearGradient(0, 0, 0, 300);
     mcGradient.addColorStop(0, 'rgba(16, 185, 129, 0.8)');
     mcGradient.addColorStop(1, 'rgba(16, 185, 129, 0.15)');
-
-    // Find mean bucket index for annotation
-    const meanLabel = (mcRes.mean * 1000).toFixed(0);
 
     state.charts.mc = new Chart(els.charts.mcCtx, {
         type: 'bar',
@@ -338,10 +382,7 @@ function updateCharts(res, mcRes) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            animation: {
-                duration: 800,
-                easing: 'easeOutQuart'
-            },
+            animation: { duration: 800, easing: 'easeOutQuart' },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -368,7 +409,6 @@ function updateCharts(res, mcRes) {
         }
     });
 
-    // Update Monte Carlo stats with colors
     document.getElementById('mc-min').textContent = (mcRes.min * 1000).toLocaleString('en-US', { maximumFractionDigits: 0 });
     document.getElementById('mc-max').textContent = (mcRes.max * 1000).toLocaleString('en-US', { maximumFractionDigits: 0 });
     document.getElementById('mc-mean').textContent = (mcRes.mean * 1000).toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -427,13 +467,12 @@ function updateAll() {
     const result = calculateDCF();
     state.results = result;
 
-    // 3. Update Hero with animation
+    // 3. Update Hero
     const priceVND = result.sharePrice * 1000;
     els.results.price.textContent = priceVND.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' VND';
     els.results.ev.textContent = result.enterpriseValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
     els.results.equity.textContent = result.equityValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
 
-    // Animate hero values
     animateValue(els.results.price);
     animateValue(els.results.ev);
     animateValue(els.results.equity);
@@ -444,7 +483,7 @@ function updateAll() {
     const mcRes = runMonteCarlo();
 
     // 5. Render
-    const mcData = updateCharts(result, mcRes);
+    updateCharts(result, mcRes);
     renderSensitivity();
     updateTable(result);
     updateSummary(result, mcRes.mean);
@@ -457,11 +496,9 @@ Object.values(els.inputs).forEach(input => {
 
 // --- Scenarios ---
 window.setScenario = (type) => {
-    // Reset buttons
     document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
     event.target.classList.add('active');
 
-    // Set Inputs
     if (type === 'base') {
         els.inputs.growth.value = 5.0;
         els.inputs.margin.value = 29.0;
@@ -476,9 +513,7 @@ window.setScenario = (type) => {
         els.inputs.wacc.value = 12.0;
     }
 
-    // Update all slider fills
     Object.values(els.inputs).forEach(slider => updateSliderFill(slider));
-
     updateAll();
 };
 
@@ -491,5 +526,464 @@ if (sidebarToggle) {
     });
 }
 
-// --- Init ---
+// ============================
+// TAB 2: FINANCIAL ANALYSIS
+// ============================
+function renderAnalysisTab() {
+    // Calculate ratios for all years
+    state.ratiosAllYears = FinancialAnalysis.calculateAllYears(FINANCIAL_DATA);
+    const latestRatios = state.ratiosAllYears[state.ratiosAllYears.length - 1];
+
+    // --- Key Ratio Cards ---
+    const keyRatios = ['roe', 'roa', 'current_ratio', 'debt_to_equity', 'gross_margin', 'ev_ebitda'];
+    const cardsContainer = document.getElementById('ratio-cards');
+
+    cardsContainer.innerHTML = keyRatios.map(key => {
+        const config = FinancialAnalysis.RATIO_CONFIG[key];
+        const value = latestRatios[key];
+        const interp = FinancialAnalysis.interpretRatio(key, value);
+        const formatted = FinancialAnalysis.formatValue(value, config.format);
+
+        return `
+            <div class="ratio-card">
+                <div class="ratio-card-header">
+                    <span class="ratio-card-label">${config.label}</span>
+                    <span class="rating-badge" style="background: ${interp.color}20; color: ${interp.color};">${interp.rating}</span>
+                </div>
+                <div class="ratio-card-value">${formatted}</div>
+                <div class="ratio-card-desc">${config.vi}</div>
+            </div>
+        `;
+    }).join('');
+
+    // --- Profitability Trend Chart ---
+    renderProfitTrendChart();
+
+    // --- Balance Sheet Ratios Chart ---
+    renderBSRatiosChart();
+
+    // --- DuPont Analysis ---
+    renderDuPont(latestRatios);
+
+    // --- Ratio Detail Table ---
+    renderRatioDetailTable();
+}
+
+function renderProfitTrendChart() {
+    const ctx = document.getElementById('profitTrendChart').getContext('2d');
+    if (state.charts.profitTrend) state.charts.profitTrend.destroy();
+
+    const years = FINANCIAL_DATA.years;
+    const allRatios = state.ratiosAllYears;
+
+    state.charts.profitTrend = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: years,
+            datasets: [
+                {
+                    label: 'Gross Margin',
+                    data: allRatios.map(r => (r.gross_margin * 100)),
+                    borderColor: '#3fb950',
+                    backgroundColor: 'rgba(63, 185, 80, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    borderWidth: 2,
+                },
+                {
+                    label: 'Net Margin',
+                    data: allRatios.map(r => (r.net_margin * 100)),
+                    borderColor: '#58a6ff',
+                    backgroundColor: 'rgba(88, 166, 255, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    borderWidth: 2,
+                },
+                {
+                    label: 'ROE',
+                    data: allRatios.map(r => (r.roe * 100)),
+                    borderColor: '#d29922',
+                    backgroundColor: 'rgba(210, 153, 34, 0.1)',
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: { color: '#8b949e', font: { family: 'Inter', size: 11 }, boxWidth: 12, padding: 16 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(22, 27, 34, 0.95)',
+                    borderColor: '#30363d',
+                    borderWidth: 1,
+                    titleColor: '#e6edf3',
+                    bodyColor: '#8b949e',
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    grid: { color: 'rgba(48, 54, 61, 0.5)', drawBorder: false },
+                    ticks: { color: '#6e7681', font: { family: 'JetBrains Mono', size: 11 }, callback: v => v + '%' },
+                    border: { display: false }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#8b949e', font: { family: 'Inter', size: 12 } },
+                    border: { display: false }
+                }
+            }
+        }
+    });
+}
+
+function renderBSRatiosChart() {
+    const ctx = document.getElementById('bsRatiosChart').getContext('2d');
+    if (state.charts.bsRatios) state.charts.bsRatios.destroy();
+
+    const years = FINANCIAL_DATA.years;
+    const allRatios = state.ratiosAllYears;
+
+    state.charts.bsRatios = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: years,
+            datasets: [
+                {
+                    label: 'Current Ratio',
+                    data: allRatios.map(r => r.current_ratio),
+                    borderColor: '#58a6ff',
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    borderWidth: 2,
+                },
+                {
+                    label: 'Quick Ratio',
+                    data: allRatios.map(r => r.quick_ratio),
+                    borderColor: '#3fb950',
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    borderWidth: 2,
+                },
+                {
+                    label: 'D/E Ratio',
+                    data: allRatios.map(r => r.debt_to_equity),
+                    borderColor: '#f85149',
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: { color: '#8b949e', font: { family: 'Inter', size: 11 }, boxWidth: 12, padding: 16 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(22, 27, 34, 0.95)',
+                    borderColor: '#30363d',
+                    borderWidth: 1,
+                    titleColor: '#e6edf3',
+                    bodyColor: '#8b949e',
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}x`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    grid: { color: 'rgba(48, 54, 61, 0.5)', drawBorder: false },
+                    ticks: { color: '#6e7681', font: { family: 'JetBrains Mono', size: 11 }, callback: v => v.toFixed(1) + 'x' },
+                    border: { display: false }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#8b949e', font: { family: 'Inter', size: 12 } },
+                    border: { display: false }
+                }
+            }
+        }
+    });
+}
+
+function renderDuPont(ratios) {
+    const dp = FinancialAnalysis.calculateDuPont(ratios);
+    const container = document.getElementById('dupont-flow');
+
+    container.innerHTML = `
+        <div class="dupont-grid">
+            <div class="dupont-item dupont-result">
+                <div class="dupont-label">ROE</div>
+                <div class="dupont-value" style="color: var(--accent);">${(dp.calculated_roe * 100).toFixed(1)}%</div>
+            </div>
+            <div class="dupont-equals">=</div>
+            <div class="dupont-item">
+                <div class="dupont-label">Net Margin</div>
+                <div class="dupont-value">${(dp.net_margin * 100).toFixed(1)}%</div>
+                <div class="dupont-sub">LNST / DT</div>
+            </div>
+            <div class="dupont-operator">×</div>
+            <div class="dupont-item">
+                <div class="dupont-label">Asset Turnover</div>
+                <div class="dupont-value">${dp.asset_turnover.toFixed(2)}x</div>
+                <div class="dupont-sub">DT / Tổng TS</div>
+            </div>
+            <div class="dupont-operator">×</div>
+            <div class="dupont-item">
+                <div class="dupont-label">Equity Multiplier</div>
+                <div class="dupont-value">${dp.equity_multiplier.toFixed(2)}x</div>
+                <div class="dupont-sub">Tổng TS / VCSH</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderRatioDetailTable() {
+    const tbody = document.querySelector('#ratio-detail-table tbody');
+    const allRatios = state.ratiosAllYears;
+    const ratioKeys = [
+        'roe', 'roa', 'gross_margin', 'operating_margin', 'net_margin',
+        'current_ratio', 'quick_ratio', 'cash_ratio',
+        'debt_to_equity', 'equity_multiplier',
+        'asset_turnover', 'inventory_turnover', 'receivables_turnover',
+        'pe_ratio', 'pb_ratio', 'ev_ebitda',
+    ];
+
+    let html = '';
+    let lastCategory = '';
+
+    ratioKeys.forEach(key => {
+        const config = FinancialAnalysis.RATIO_CONFIG[key];
+        if (!config) return;
+
+        // Category separator
+        if (config.category !== lastCategory) {
+            const catLabel = config.category.charAt(0).toUpperCase() + config.category.slice(1);
+            html += `<tr class="row-section"><td colspan="7" style="text-align:left; font-weight:700; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em;">${catLabel}</td></tr>`;
+            lastCategory = config.category;
+        }
+
+        const latestValue = allRatios[allRatios.length - 1][key];
+        const interp = FinancialAnalysis.interpretRatio(key, latestValue);
+
+        html += `<tr>
+            <td style="text-align:left">${config.label} <span style="color:var(--text-dim); font-size:0.75rem;">${config.vi}</span></td>
+            ${allRatios.map(r => {
+            const v = r[key];
+            const formatted = FinancialAnalysis.formatValue(v, config.format);
+            return `<td class="num-cell">${formatted}</td>`;
+        }).join('')}
+            <td><span class="rating-badge" style="background: ${interp.color}20; color: ${interp.color};">${interp.rating}</span></td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = html;
+}
+
+// ============================
+// TAB 3: HEALTH SCORE
+// ============================
+function renderHealthTab() {
+    if (!state.ratiosAllYears) {
+        state.ratiosAllYears = FinancialAnalysis.calculateAllYears(FINANCIAL_DATA);
+    }
+
+    const latestRatios = state.ratiosAllYears[state.ratiosAllYears.length - 1];
+    const healthScore = FinancialAnalysis.calculateHealthScore(latestRatios);
+
+    // --- Health Score Hero ---
+    renderHealthHero(healthScore, latestRatios.year);
+
+    // --- Radar Chart ---
+    renderRadarChart(latestRatios);
+
+    // --- Category Scores ---
+    renderCategoryScores(healthScore);
+
+    // --- AI Interpretation ---
+    renderInterpretation(latestRatios, healthScore);
+}
+
+function renderHealthHero(healthScore, year) {
+    const container = document.getElementById('health-hero');
+    const score = healthScore.total;
+
+    let scoreColor = '#f85149';
+    let scoreLabel = 'Yếu';
+    if (score >= 85) { scoreColor = '#3fb950'; scoreLabel = 'Xuất sắc'; }
+    else if (score >= 70) { scoreColor = '#58a6ff'; scoreLabel = 'Tốt'; }
+    else if (score >= 50) { scoreColor = '#d29922'; scoreLabel = 'Trung bình'; }
+
+    const circumference = 2 * Math.PI * 54;
+    const dashOffset = circumference - (score / 100) * circumference;
+
+    container.innerHTML = `
+        <div class="health-score-card">
+            <div class="health-circle-wrap">
+                <svg class="health-circle" viewBox="0 0 120 120">
+                    <circle class="health-bg" cx="60" cy="60" r="54" />
+                    <circle class="health-progress" cx="60" cy="60" r="54"
+                        stroke="${scoreColor}"
+                        stroke-dasharray="${circumference}"
+                        stroke-dashoffset="${dashOffset}" />
+                </svg>
+                <div class="health-score-text">
+                    <span class="health-number" style="color: ${scoreColor};">${score}</span>
+                    <span class="health-label">/100</span>
+                </div>
+            </div>
+            <div class="health-meta">
+                <div class="health-status" style="color: ${scoreColor};">${scoreLabel}</div>
+                <div class="health-year">Financial Health Score — ${year}</div>
+                <div class="health-desc">Đánh giá tổng thể dựa trên 5 nhóm chỉ số: Profitability, Liquidity, Leverage, Efficiency, Valuation</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderRadarChart(ratios) {
+    const ctx = document.getElementById('radarChart').getContext('2d');
+    if (state.charts.radar) state.charts.radar.destroy();
+
+    const radarData = FinancialAnalysis.getRadarData(ratios);
+
+    state.charts.radar = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: radarData.labels,
+            datasets: [{
+                label: 'BMP Score',
+                data: radarData.data,
+                backgroundColor: 'rgba(88, 166, 255, 0.15)',
+                borderColor: '#58a6ff',
+                borderWidth: 2,
+                pointBackgroundColor: '#58a6ff',
+                pointBorderColor: '#161b22',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(22, 27, 34, 0.95)',
+                    borderColor: '#30363d',
+                    borderWidth: 1,
+                    titleColor: '#e6edf3',
+                    bodyColor: '#8b949e',
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: (ctx) => `Score: ${ctx.parsed.r}/100`
+                    }
+                }
+            },
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        stepSize: 25,
+                        color: '#6e7681',
+                        backdropColor: 'transparent',
+                        font: { family: 'JetBrains Mono', size: 10 }
+                    },
+                    grid: { color: 'rgba(48, 54, 61, 0.5)' },
+                    angleLines: { color: 'rgba(48, 54, 61, 0.5)' },
+                    pointLabels: {
+                        color: '#8b949e',
+                        font: { family: 'Inter', size: 12, weight: '600' }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderCategoryScores(healthScore) {
+    const container = document.getElementById('category-scores');
+    const categories = [
+        { key: 'profitability', label: 'Profitability', icon: '📈', color: '#3fb950' },
+        { key: 'liquidity', label: 'Liquidity', icon: '💧', color: '#58a6ff' },
+        { key: 'leverage', label: 'Leverage', icon: '⚖️', color: '#d29922' },
+        { key: 'efficiency', label: 'Efficiency', icon: '⚡', color: '#a371f7' },
+        { key: 'valuation', label: 'Valuation', icon: '💰', color: '#f0883e' },
+    ];
+
+    container.innerHTML = categories.map(cat => {
+        const score = Math.round(healthScore.categories[cat.key] || 0);
+        return `
+            <div class="cat-score-item">
+                <div class="cat-score-header">
+                    <span>${cat.icon} ${cat.label}</span>
+                    <span class="cat-score-val" style="color: ${cat.color};">${score}/100</span>
+                </div>
+                <div class="cat-score-bar">
+                    <div class="cat-score-fill" style="width: ${score}%; background: ${cat.color};"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderInterpretation(ratios, healthScore) {
+    const container = document.getElementById('interpretation-content');
+    const parts = FinancialAnalysis.generateInterpretation(ratios, healthScore);
+
+    container.innerHTML = parts.map(part => `
+        <div class="interp-block">
+            <div class="interp-header">
+                <span class="interp-icon">${part.icon}</span>
+                <span class="interp-title">${part.title}</span>
+            </div>
+            <p class="interp-text">${part.text}</p>
+        </div>
+    `).join('');
+}
+
+// ============================
+// INIT
+// ============================
 updateAll();
+
+// Initialize analysis tab slider
+requestAnimationFrame(() => {
+    updateAnalysisTabSlider('valuation');
+});
+
+window.addEventListener('resize', () => {
+    updateAnalysisTabSlider(state.currentTab);
+});
