@@ -1,0 +1,73 @@
+{
+    "company": "Nhựa Bình Minh (BMP)",
+    "years": [
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+    ],
+    "shares_outstanding": 81.86,
+    "historical": {
+        "revenue": [
+            4553,
+            5808,
+            5157,
+            4616,
+            5510
+        ],
+        "ebitda": [
+            459,
+            1041,
+            1479,
+            1352,
+            1632
+        ],
+        "capex": [
+            159,
+            70,
+            58,
+            109,
+            123
+        ],
+        "nwc": [
+            497,
+            488,
+            37,
+            201,
+            217
+        ],
+        "ebt": [
+            268,
+            871,
+            1307,
+            1241,
+            1539
+        ],
+        "interest": [
+            0,
+            0,
+            0,
+            0,
+            0
+        ],
+        "depr": [
+            191,
+            170,
+            172,
+            111,
+            93
+        ],
+        "cash_equivalents": 2057,
+        "debt": 0
+    },
+    "assumptions": {
+        "rev_growth": 0.05,
+        "ebitda_margin": 0.29,
+        "tax_rate": 0.20,
+        "wacc": 0.11,
+        "terminal_growth": 0.03,
+        "capex_pct": 0.022,
+        "nwc_pct": 0.04
+    }
+}

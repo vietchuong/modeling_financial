@@ -1,0 +1,57 @@
+[
+    {
+        "year": 2021,
+        "revenue": 4553,
+        "ebitda": 459,
+        "ebt": 268,
+        "net_income": 214,
+        "capex": 159,
+        "nwc": 497,
+        "cash": 2008,
+        "debt": 545
+    },
+    {
+        "year": 2022,
+        "revenue": 5808,
+        "ebitda": 1041,
+        "ebt": 871,
+        "net_income": 694,
+        "capex": 70,
+        "nwc": 488,
+        "cash": 2215,
+        "debt": 423
+    },
+    {
+        "year": 2023,
+        "revenue": 5157,
+        "ebitda": 1479,
+        "ebt": 1307,
+        "net_income": 1041,
+        "capex": 58,
+        "nwc": 37,
+        "cash": 2594,
+        "debt": 565
+    },
+    {
+        "year": 2024,
+        "revenue": 4616,
+        "ebitda": 1352,
+        "ebt": 1241,
+        "net_income": 991,
+        "capex": 109,
+        "nwc": 201,
+        "cash": 2596,
+        "debt": 499
+    },
+    {
+        "year": 2025,
+        "revenue": 5510,
+        "ebitda": 1632,
+        "ebt": 1539,
+        "net_income": 1229,
+        "capex": 123,
+        "nwc": 217,
+        "cash": 2758,
+        "debt": 501
+    }
+]

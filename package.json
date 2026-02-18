@@ -1,0 +1,25 @@
+{
+  "name": "modeling_financial",
+  "version": "1.0.0",
+  "description": "Financial Modeling and Valuation Tool",
+  "private": true,
+  "scripts": {
+    "web:dev": "cd web && npm run dev",
+    "web:build": "cd web && npm run build",
+    "web:start": "cd web && npm run start",
+    "web:install": "cd web && npm install",
+    "setup": "npm install && npm run web:install",
+    "data:process": "python scripts/full_data_to_json.py"
+  },
+  "keywords": [
+    "financial",
+    "modeling",
+    "dcf",
+    "valuation"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

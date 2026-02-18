@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Financial Statements - BMP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <!-- Load Simplified Data for Ratios -->
+    <script src="data/financials.js"></script>
+    <!-- Load Full Table Data -->
+    <script src="data/full_financials.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+            text-align: right;
+        }
+
+        .data-table th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            background: rgba(30, 41, 59, 0.95);
+            position: sticky;
+            top: 64px;
+            /* Height of the main header */
+            z-index: 900;
+            backdrop-filter: blur(4px);
+        }
+
+        .data-table td {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="brand">
+            <span>Ag.</span> Valuation Dashboard
+            <span style="font-weight:400; color:var(--text-sub); margin-left: 1rem; font-size: 0.9rem;">CTCP Nhựa Bình
+                Minh (BMP)</span>
+        </div>
+        <div style="display: flex; gap: 2rem;">
+            <nav>
+                <a href="index.html" class="nav-link">Valuation Model</a>
+                <a href="inputs.html" class="nav-link active">Historical Data</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container" style="display: block; max-width: 1200px; margin: 0 auto; padding: 2rem;">
+
+        <!-- Modern Tabs -->
+        <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
+            <div class="tabs-container" style="margin-bottom: 0;">
+                <button class="tab-btn active" onclick="showTab(0)">All Statements</button>
+                <button class="tab-btn" onclick="showTab(1)">Vertical Analysis (%)</button>
+                <button class="tab-btn" onclick="showTab(2)">Horizontal Analysis (Growth)</button>
+            </div>
+        </div>
+
+        <div id="financial-content">
+            <!-- Injected via JS -->
+        </div>
+
+    </div>
+
+    <script>
+        let currentTab = 0; // 0: Raw, 1: Vertical, 2: Horizontal
+
+        function render() {
+            const container = document.getElementById('financial-content');
+            container.innerHTML = '';
+
+            FULL_FINANCIAL_TABLES.forEach((table, tableIdx) => {
+                const section = document.createElement('section');
+                section.className = 'card';
+                section.style.marginBottom = '2rem';
+
+                // Header
+                const header = document.createElement('div');
+                header.className = 'card-header';
+                header.textContent = table.title;
+                section.appendChild(header);
+
+                // Wrapper
+                const wrapper = document.createElement('div');
+                wrapper.style.overflowX = 'auto';
+
+                // Table
+                const tbl = document.createElement('table');
+                tbl.className = 'data-table';
+
+                // THead
+                const thead = document.createElement('thead');
+                const headRow = document.createElement('tr');
+                headRow.innerHTML = `<th>Item</th>` + table.headers.map(h => `<th>${h}</th>`).join('');
+                thead.appendChild(headRow);
+                tbl.appendChild(thead);
+
+                // TBody
+                const tbody = document.createElement('tbody');
+
+                table.rows.forEach(row => {
+                    const tr = document.createElement('tr');
+
+                    let valsHtml = '';
+
+                    // Raw Data
+                    if (currentTab === 0) {
+                        valsHtml = row.values.map(v => `<td>${v.toLocaleString('en-US')}</td>`).join('');
+                    }
+                    // Vertical Analysis (Common Size)
+                    else if (currentTab === 1) {
+                        // Base logic: 
+                        // IS -> % of Revenue (row index 0)
+                        // BS -> % of Total Assets (Need to find Total Assets row)
+                        // CF -> N/A usually or % of Revenue
+
+                        let baseValues;
+                        if (table.title.includes("Income")) baseValues = table.rows[0].values; // Revenue
+                        else if (table.title.includes("Balance")) {
+                            // Find Total Assets
+                            const assetsRow = table.rows.find(r => r.label.toLowerCase().includes("tổng tài sản"));
+                            baseValues = assetsRow ? assetsRow.values : null;
+                        }
+
+                        if (baseValues) {
+                            valsHtml = row.values.map((v, i) => {
+                                if (baseValues[i] === 0) return '<td>-</td>';
+                                const pct = (v / baseValues[i]) * 100;
+                                return `<td>${pct.toFixed(1)}%</td>`;
+                            }).join('');
+                        } else {
+                            valsHtml = row.values.map(v => `<td>-</td>`).join('');
+                        }
+                    }
+                    // Horizontal Analysis (YoY Growth)
+                    else if (currentTab === 2) {
+                        valsHtml = row.values.map((v, i) => {
+                            if (i === 0) return '<td>-</td>';
+                            const prev = row.values[i - 1];
+                            if (prev === 0) return '<td>-</td>';
+                            const growth = ((v - prev) / Math.abs(prev)) * 100;
+
+                            let color = 'var(--text-primary)';
+                            if (growth > 0) color = 'var(--accent-success)';
+                            if (growth < 0) color = 'var(--accent-danger)';
+
+                            return `<td style="color:${color}">${growth > 0 ? '+' : ''}${growth.toFixed(1)}%</td>`;
+                        }).join('');
+                    }
+
+                    // Determine row style
+                    const labelLower = row.label.toLowerCase();
+                    const isTotal = labelLower.includes('tổng') || labelLower.includes('total') || labelLower.includes('lợi nhuận');
+                    const isSection = row.label === row.label.toUpperCase() && !row.label.match(/\d/); // Simple heuristic: All caps = section
+
+                    if (isSection) tr.classList.add('row-section');
+                    if (isTotal) tr.classList.add('row-total');
+
+                    tr.innerHTML = `<td style="${isTotal || isSection ? 'color: inherit' : 'color: var(--text-main)'}">${row.label}</td>` + valsHtml;
+                    tbody.appendChild(tr);
+                });
+
+                tbl.appendChild(tbody);
+                wrapper.appendChild(tbl);
+                section.appendChild(wrapper);
+                container.appendChild(section);
+            });
+        }
+
+        function showTab(idx) {
+            currentTab = idx;
+            document.querySelectorAll('.tab-btn').forEach((b, i) => {
+                if (i === idx) b.classList.add('active');
+                else b.classList.remove('active');
+            });
+            render();
+        }
+
+        render();
+
+    </script>
+</body>
+
+</html>
