@@ -35,39 +35,68 @@ const els = {
     charts: {
         dcfCtx: document.getElementById('dcfChart').getContext('2d'),
         mcCtx: document.getElementById('monteCarloChart').getContext('2d'),
+    },
+    summary: {
+        pvFcf: document.getElementById('sum-pv-fcf'),
+        pvTv: document.getElementById('sum-pv-tv'),
+        ev: document.getElementById('sum-ev'),
+        netCash: document.getElementById('sum-net-cash'),
+        equity: document.getElementById('sum-equity'),
+        shares: document.getElementById('sum-shares'),
+        price: document.getElementById('sum-price'),
+        mcMean: document.getElementById('sum-mc-mean'),
     }
 };
 
 // --- Formatting ---
 const fmt = {
-    bnb: (n) => (n).toLocaleString('en-US', { maximumFractionDigits: 0 }),
+    bn: (n) => (n).toLocaleString('en-US', { maximumFractionDigits: 0 }),
     pct: (n) => (n * 100).toFixed(1) + '%',
-    curr: (n) => (n).toLocaleString('en-US', { style: 'currency', currency: 'VND' }),
+    curr: (n) => (n).toLocaleString('en-US', { maximumFractionDigits: 0 }),
 };
+
+// --- Update Range Slider Track Fill ---
+function updateSliderFill(slider) {
+    const min = parseFloat(slider.min);
+    const max = parseFloat(slider.max);
+    const val = parseFloat(slider.value);
+    const pct = ((val - min) / (max - min)) * 100;
+    slider.style.background = `linear-gradient(90deg, #58a6ff 0%, #58a6ff ${pct}%, #30363d ${pct}%, #30363d 100%)`;
+}
+
+// Initialize all sliders
+Object.values(els.inputs).forEach(slider => {
+    updateSliderFill(slider);
+    slider.addEventListener('input', () => updateSliderFill(slider));
+});
+
+// --- Animate Value Change ---
+function animateValue(element) {
+    element.classList.remove('animate-value');
+    // Force reflow
+    void element.offsetWidth;
+    element.classList.add('animate-value');
+}
 
 // --- Core DCF Logic ---
 function calculateDCF(inputOverrides = {}) {
-    // Merge defaults with overrides
     const config = { ...state.assumptions, ...inputOverrides };
 
     const years = 5;
-    const baseRev = FINANCIAL_DATA.historical.revenue[FINANCIAL_DATA.historical.revenue.length - 1]; // 2025 rev
+    const baseRev = FINANCIAL_DATA.historical.revenue[FINANCIAL_DATA.historical.revenue.length - 1];
     const projections = [];
 
     let prevRev = baseRev;
 
-    // Project Cash Flows
     for (let i = 1; i <= years; i++) {
         const rev = prevRev * (1 + config.rev_growth);
         const ebitda = rev * config.ebitda_margin;
-        const depr = rev * config.capex_pct; // Assume Depr = Capex % for simplicity or user separate assumption
+        const depr = rev * config.capex_pct;
         const ebit = ebitda - depr;
         const tax = ebit * config.tax_rate;
         const nopat = ebit - tax;
 
-        // Capex & NWC
         const capex = rev * config.capex_pct;
-        // NWC Change calculation simplified: Assume NWC is % of Revenue, calculate delta
         const nwc = rev * config.nwc_pct;
         const prevNwc = prevRev * config.nwc_pct;
         const nwcChange = nwc - prevNwc;
@@ -86,7 +115,6 @@ function calculateDCF(inputOverrides = {}) {
 
     // Terminal Value
     const lastFCF = projections[years - 1].fcf;
-    // Gordon Growth
     let terminalValue = 0;
     if (config.wacc > config.terminal_growth) {
         terminalValue = (lastFCF * (1 + config.terminal_growth)) / (config.wacc - config.terminal_growth);
@@ -101,7 +129,6 @@ function calculateDCF(inputOverrides = {}) {
     const pvTerminal = terminalValue / Math.pow(1 + config.wacc, years);
     const enterpriseValue = pvFCF + pvTerminal;
 
-    // Equity Value
     const cash = FINANCIAL_DATA.historical.cash_equivalents;
     const debt = FINANCIAL_DATA.historical.debt;
     const equityValue = enterpriseValue + cash - debt;
@@ -128,18 +155,12 @@ function runMonteCarlo() {
     const baseWacc = state.assumptions.wacc;
 
     for (let i = 0; i < iterations; i++) {
-        // Random Normal Distribution (approx)
         const randNorm = () => {
             let u = 0, v = 0;
             while (u === 0) u = Math.random();
             while (v === 0) v = Math.random();
             return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
         }
-
-        // Perturb inputs: 
-        // Growth: +/- 2% std dev
-        // Margin: +/- 2% std dev
-        // WACC: +/- 1% std dev
 
         const g = baseGrowth + (randNorm() * 0.015);
         const m = baseMargin + (randNorm() * 0.015);
@@ -151,15 +172,14 @@ function runMonteCarlo() {
             wacc: w
         });
 
-        if (result.sharePrice > 0) prices.push(result.sharePrice); // Filter out failed calcs
+        if (result.sharePrice > 0) prices.push(result.sharePrice);
     }
 
-    // Create Histogram Bins
     prices.sort((a, b) => a - b);
 
     const min = prices[0];
     const max = prices[prices.length - 1];
-    const bins = 20;
+    const bins = 25;
     const binSize = (max - min) / bins;
     const histogram = new Array(bins).fill(0);
     const labels = [];
@@ -181,8 +201,8 @@ function renderSensitivity() {
     const waccBase = state.assumptions.wacc;
     const growthBase = state.assumptions.terminal_growth;
 
-    const wSteps = [-0.01, -0.005, 0, 0.005, 0.01]; // Rows
-    const gSteps = [-0.01, -0.005, 0, 0.005, 0.01]; // Cols
+    const wSteps = [-0.01, -0.005, 0, 0.005, 0.01];
+    const gSteps = [-0.01, -0.005, 0, 0.005, 0.01];
 
     let html = `<div class="heatmap-cell heatmap-header">WACC \\ g</div>`;
 
@@ -192,6 +212,8 @@ function renderSensitivity() {
     });
 
     // Rows
+    const basePrice = state.results.sharePrice * 1000;
+
     wSteps.forEach(w => {
         const currentWacc = waccBase + w;
         html += `<div class="heatmap-cell heatmap-header">${(currentWacc * 100).toFixed(1)}%</div>`;
@@ -199,17 +221,21 @@ function renderSensitivity() {
         gSteps.forEach(g => {
             const currentGrowth = growthBase + g;
             const res = calculateDCF({ wacc: currentWacc, terminal_growth: currentGrowth });
-            // Color coding
-            const price = res.sharePrice * 1000; // to VND
-            // Simple coloring based on base price
-            const basePrice = state.results.sharePrice * 1000;
+            const price = res.sharePrice * 1000;
             const pctDiff = (price - basePrice) / basePrice;
 
-            let color = 'var(--text-main)';
-            if (pctDiff > 0.05) color = '#10b981';
-            if (pctDiff < -0.05) color = '#ef4444';
+            // Determine heat class
+            let heatClass = 'heat-neutral';
+            if (pctDiff > 0.08) heatClass = 'heat-strong-up';
+            else if (pctDiff > 0.03) heatClass = 'heat-up';
+            else if (pctDiff < -0.08) heatClass = 'heat-strong-down';
+            else if (pctDiff < -0.03) heatClass = 'heat-down';
 
-            html += `<div class="heatmap-cell heatmap-val" style="color:${color}">${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}</div>`;
+            // Mark base case (both offsets are 0)
+            const isBase = (w === 0 && g === 0);
+            const baseClass = isBase ? ' heat-base-case' : '';
+
+            html += `<div class="heatmap-cell heatmap-val ${heatClass}${baseClass}">${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}</div>`;
         });
     });
 
@@ -219,81 +245,167 @@ function renderSensitivity() {
 // --- UI Updates ---
 
 function updateCharts(res, mcRes) {
-    // DCF Chart
     const labels = res.projections.map(p => p.year);
     const data = res.projections.map(p => p.fcf);
 
-    // Add terminal value visualization? Maybe messy. Stick to FCF.
-
+    // DCF Chart with gradient
     if (state.charts.dcf) state.charts.dcf.destroy();
+
+    const dcfGradient = els.charts.dcfCtx.createLinearGradient(0, 0, 0, 300);
+    dcfGradient.addColorStop(0, 'rgba(88, 166, 255, 0.9)');
+    dcfGradient.addColorStop(1, 'rgba(59, 130, 246, 0.4)');
+
     state.charts.dcf = new Chart(els.charts.dcfCtx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Projected Free Cash Flow (FCF)',
+                label: 'Projected FCF',
                 data: data,
-                backgroundColor: '#3b82f6',
-                borderRadius: 4
+                backgroundColor: dcfGradient,
+                borderColor: 'rgba(88, 166, 255, 0.8)',
+                borderWidth: 1,
+                borderRadius: 6,
+                borderSkipped: false,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            animation: {
+                duration: 600,
+                easing: 'easeOutQuart'
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(22, 27, 34, 0.95)',
+                    borderColor: '#30363d',
+                    borderWidth: 1,
+                    titleColor: '#e6edf3',
+                    bodyColor: '#8b949e',
+                    titleFont: { family: 'Inter', weight: '600' },
+                    bodyFont: { family: 'JetBrains Mono' },
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: false,
+                    callbacks: {
+                        label: (ctx) => `FCF: ${ctx.parsed.y.toLocaleString('en-US', { maximumFractionDigits: 0 })} Bn VND`
+                    }
+                }
+            },
             scales: {
-                y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(48, 54, 61, 0.5)', drawBorder: false },
+                    ticks: { color: '#6e7681', font: { family: 'JetBrains Mono', size: 11 } },
+                    border: { display: false }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#8b949e', font: { family: 'Inter', size: 12 } },
+                    border: { display: false }
+                }
             }
         }
     });
 
-    // Monte Carlo Chart
+    // Monte Carlo Chart with gradient + mean line
     if (state.charts.mc) state.charts.mc.destroy();
+
+    const mcGradient = els.charts.mcCtx.createLinearGradient(0, 0, 0, 300);
+    mcGradient.addColorStop(0, 'rgba(16, 185, 129, 0.8)');
+    mcGradient.addColorStop(1, 'rgba(16, 185, 129, 0.15)');
+
+    // Find mean bucket index for annotation
+    const meanLabel = (mcRes.mean * 1000).toFixed(0);
+
     state.charts.mc = new Chart(els.charts.mcCtx, {
-        type: 'bar', // Histogram
+        type: 'bar',
         data: {
             labels: mcRes.labels,
             datasets: [{
                 label: 'Frequency',
                 data: mcRes.data,
-                backgroundColor: 'rgba(16, 185, 129, 0.6)',
-                borderColor: '#10b981',
+                backgroundColor: mcGradient,
+                borderColor: 'rgba(16, 185, 129, 0.6)',
                 borderWidth: 1,
                 barPercentage: 1.0,
-                categoryPercentage: 1.0
+                categoryPercentage: 1.0,
+                borderRadius: 2,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            animation: {
+                duration: 800,
+                easing: 'easeOutQuart'
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(22, 27, 34, 0.95)',
+                    borderColor: '#30363d',
+                    borderWidth: 1,
+                    titleColor: '#e6edf3',
+                    bodyColor: '#8b949e',
+                    titleFont: { family: 'Inter', weight: '600' },
+                    bodyFont: { family: 'JetBrains Mono' },
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: false,
+                    callbacks: {
+                        title: (ctx) => `Price Range: ${(parseFloat(ctx[0].label) * 1000).toLocaleString()} VND`,
+                        label: (ctx) => `Count: ${ctx.parsed.y} iterations`
+                    }
+                }
+            },
             scales: {
-                x: { display: false }, // Hide raw buckets
+                x: { display: false },
                 y: { display: false }
             }
         }
     });
 
-    // Update Monte Carlo Text
+    // Update Monte Carlo stats with colors
     document.getElementById('mc-min').textContent = (mcRes.min * 1000).toLocaleString('en-US', { maximumFractionDigits: 0 });
     document.getElementById('mc-max').textContent = (mcRes.max * 1000).toLocaleString('en-US', { maximumFractionDigits: 0 });
     document.getElementById('mc-mean').textContent = (mcRes.mean * 1000).toLocaleString('en-US', { maximumFractionDigits: 0 });
+
+    return mcRes;
 }
 
 function updateTable(res) {
     let html = '';
-    res.projections.forEach(p => {
+    res.projections.forEach((p, i) => {
+        const isLast = i === res.projections.length - 1;
         html += `
-      <tr>
+      <tr style="${isLast ? 'font-weight: 600;' : ''}">
         <td>${p.year}</td>
         <td class="num-cell">${p.rev.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
         <td class="num-cell">${p.ebitda.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
-        <td class="num-cell" style="color:#3b82f6; font-weight:600">${p.fcf.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
+        <td class="num-cell" style="color: var(--accent); font-weight:600">${p.fcf.toLocaleString('en-US', { maximumFractionDigits: 0 })}</td>
       </tr>
     `;
     });
     els.results.table.innerHTML = html;
+}
+
+function updateSummary(res, mcMean) {
+    const cash = FINANCIAL_DATA.historical.cash_equivalents;
+    const debt = FINANCIAL_DATA.historical.debt;
+    const netCash = cash - debt;
+
+    els.summary.pvFcf.textContent = fmt.bn(res.pvFCF) + ' Bn';
+    els.summary.pvTv.textContent = fmt.bn(res.pvTerminal) + ' Bn';
+    els.summary.ev.textContent = fmt.bn(res.enterpriseValue) + ' Bn';
+    els.summary.netCash.textContent = fmt.bn(netCash) + ' Bn';
+    els.summary.netCash.style.color = netCash >= 0 ? 'var(--success)' : 'var(--danger)';
+    els.summary.equity.textContent = fmt.bn(res.equityValue) + ' Bn';
+    els.summary.shares.textContent = (FINANCIAL_DATA.shares_outstanding).toLocaleString('en-US', { maximumFractionDigits: 1 }) + 'M';
+    els.summary.price.textContent = (res.sharePrice * 1000).toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' VND';
+    els.summary.mcMean.textContent = (mcMean * 1000).toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' VND';
 }
 
 function updateAll() {
@@ -313,26 +425,29 @@ function updateAll() {
 
     // 2. Run DCF
     const result = calculateDCF();
-    state.results = result; // Store global for other funcs
+    state.results = result;
 
-    // 3. Update Hero
+    // 3. Update Hero with animation
     const priceVND = result.sharePrice * 1000;
     els.results.price.textContent = priceVND.toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' VND';
     els.results.ev.textContent = result.enterpriseValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
     els.results.equity.textContent = result.equityValue.toLocaleString('en-US', { maximumFractionDigits: 0 });
 
-    // Upside/Downside? Assume current price is roughly recent trading (lets say 115k for BMP context example, or just show change from base)
-    // Let's just show "Estimated Value" for now, or compare to a fixed reference if known.
-    // Actually, let's compare to book value or just leave blank
+    // Animate hero values
+    animateValue(els.results.price);
+    animateValue(els.results.ev);
+    animateValue(els.results.equity);
+
     els.results.upside.textContent = "Estimated Value (Implied)";
 
     // 4. Run Simulations
     const mcRes = runMonteCarlo();
 
     // 5. Render
-    updateCharts(result, mcRes);
+    const mcData = updateCharts(result, mcRes);
     renderSensitivity();
     updateTable(result);
+    updateSummary(result, mcRes.mean);
 }
 
 // --- Event Listeners ---
@@ -360,8 +475,21 @@ window.setScenario = (type) => {
         els.inputs.margin.value = 25.0;
         els.inputs.wacc.value = 12.0;
     }
+
+    // Update all slider fills
+    Object.values(els.inputs).forEach(slider => updateSliderFill(slider));
+
     updateAll();
 };
+
+// --- Mobile Sidebar Toggle ---
+const sidebar = document.getElementById('sidebar');
+const sidebarToggle = document.querySelector('.sidebar-toggle');
+if (sidebarToggle) {
+    sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+    });
+}
 
 // --- Init ---
 updateAll();

@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detailed Financial Statements - BMP</title>
+    <meta name="description"
+        content="Historical financial data and analysis for CTCP Nhựa Bình Minh (BMP). Income Statement, Balance Sheet, Cash Flow with vertical and horizontal analysis.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -17,44 +19,367 @@
 
     <link rel="stylesheet" href="css/style.css">
     <style>
+        /* ============================================ */
+        /* KPI Summary Cards                            */
+        /* ============================================ */
+        .kpi-bar {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .kpi-card {
+            background: rgba(22, 27, 34, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(48, 54, 61, 0.6);
+            border-radius: 12px;
+            padding: 1.25rem 1rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-color: rgba(88, 166, 255, 0.3);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), #79c0ff);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .kpi-card:hover::before {
+            opacity: 1;
+        }
+
+        .kpi-icon {
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .kpi-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-sub);
+            margin-bottom: 0.4rem;
+            font-weight: 500;
+        }
+
+        .kpi-value {
+            font-family: var(--font-mono);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        .kpi-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-top: 0.4rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            font-family: var(--font-mono);
+            padding: 0.15rem 0.5rem;
+            border-radius: 50px;
+        }
+
+        .kpi-trend.up {
+            color: var(--success);
+            background: rgba(63, 185, 80, 0.1);
+        }
+
+        .kpi-trend.down {
+            color: var(--danger);
+            background: rgba(248, 81, 73, 0.1);
+        }
+
+        /* ============================================ */
+        /* Animated Tabs                                */
+        /* ============================================ */
+        .tabs-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.5s ease-out 0.15s both;
+        }
+
+        .tabs-container {
+            position: relative;
+            margin-bottom: 0;
+        }
+
+        .tab-btn {
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tab-btn .tab-icon {
+            margin-right: 0.35rem;
+            font-size: 0.9rem;
+        }
+
+        .tab-slider {
+            position: absolute;
+            top: 0.25rem;
+            bottom: 0.25rem;
+            left: 0.25rem;
+            background: var(--accent);
+            border-radius: 6px;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1;
+            box-shadow: 0 2px 8px rgba(88, 166, 255, 0.3);
+        }
+
+        .tab-btn.active {
+            background: transparent;
+            color: #fff;
+        }
+
+        /* ============================================ */
+        /* Enhanced Data Tables                         */
+        /* ============================================ */
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 1rem;
+            margin-top: 0.5rem;
         }
 
         .data-table th,
         .data-table td {
-            padding: 0.6rem 1rem;
-            border-bottom: 1px solid var(--border-subtle);
+            padding: 0.65rem 1rem;
+            border-bottom: 1px solid rgba(48, 54, 61, 0.5);
             text-align: right;
         }
 
         .data-table th {
-            color: var(--text-secondary);
+            color: var(--text-sub);
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            background: rgba(30, 41, 59, 0.95);
-            position: sticky;
-            top: 64px;
-            /* Height of the main header */
-            z-index: 900;
-            backdrop-filter: blur(4px);
+            background: rgba(22, 27, 34, 0.98);
         }
 
         .data-table td {
             font-family: var(--font-mono);
             font-size: 0.85rem;
-            color: var(--text-primary);
+            color: var(--text-main);
         }
 
+        /* Zebra striping */
+        .data-table tbody tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.015);
+        }
+
+        /* Enhanced hover */
+        .data-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(88, 166, 255, 0.06) !important;
+            box-shadow: inset 3px 0 0 var(--accent);
+        }
+
+        /* Negative values */
+        .val-negative {
+            color: var(--danger) !important;
+        }
+
+        .val-positive {
+            color: var(--success) !important;
+        }
+
+        /* Sparkline cell */
+        .sparkline-cell {
+            width: 80px;
+            padding: 0.4rem 0.5rem !important;
+        }
+
+        .sparkline-cell svg {
+            display: block;
+        }
+
+        /* Section title */
         .section-title {
             font-size: 1.1rem;
             font-weight: 600;
-            color: var(--accent-primary);
+            color: var(--accent);
             margin-bottom: 0.5rem;
+        }
+
+        /* Statement cards */
+        .statement-card {
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 0;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: staggerFadeIn 0.5s ease-out forwards;
+        }
+
+        .statement-card .card-header {
+            padding: 1rem 1.25rem;
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--panel-border);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .card-header-icon {
+            font-size: 1.15rem;
+        }
+
+        .statement-card .table-wrapper {
+            overflow-x: auto;
+            padding: 0 0.25rem;
+        }
+
+        /* Special Rows */
+        .row-section {
+            background-color: rgba(88, 166, 255, 0.04) !important;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.02em;
+        }
+
+        .row-total {
+            font-weight: 700;
+            background: rgba(88, 166, 255, 0.06) !important;
+            border-top: 2px solid var(--panel-border);
+        }
+
+        .row-total td {
+            color: #79c0ff !important;
+        }
+
+        /* ============================================ */
+        /* Tab content transition                       */
+        /* ============================================ */
+        #financial-content {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        #financial-content.fade-out {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        /* ============================================ */
+        /* Footer                                       */
+        /* ============================================ */
+        .page-footer {
+            border-top: 1px solid var(--panel-border);
+            padding: 1.5rem 2rem;
+            margin-top: 2rem;
+            text-align: center;
+            color: var(--text-sub);
+            font-size: 0.78rem;
+            animation: fadeInDown 0.5s ease-out 0.6s both;
+        }
+
+        .page-footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .page-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-divider {
+            margin: 0 0.5rem;
+            color: var(--panel-border);
+        }
+
+        /* ============================================ */
+        /* Animations                                   */
+        /* ============================================ */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes staggerFadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes countUp {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .count-animate {
+            animation: countUp 0.4s ease-out;
+        }
+
+        /* ============================================ */
+        /* Responsive                                   */
+        /* ============================================ */
+        @media (max-width: 900px) {
+            .kpi-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .kpi-bar .kpi-card:last-child {
+                grid-column: span 2;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .kpi-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .kpi-bar .kpi-card:last-child {
+                grid-column: span 1;
+            }
+
+            .tabs-container {
+                flex-direction: column;
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -79,12 +404,24 @@
     <!-- Main Container -->
     <div class="container" style="display: block; max-width: 1200px; margin: 0 auto; padding: 2rem;">
 
-        <!-- Modern Tabs -->
-        <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
-            <div class="tabs-container" style="margin-bottom: 0;">
-                <button class="tab-btn active" onclick="showTab(0)">All Statements</button>
-                <button class="tab-btn" onclick="showTab(1)">Vertical Analysis (%)</button>
-                <button class="tab-btn" onclick="showTab(2)">Horizontal Analysis (Growth)</button>
+        <!-- KPI Summary Cards -->
+        <div class="kpi-bar" id="kpi-bar">
+            <!-- Injected via JS -->
+        </div>
+
+        <!-- Modern Animated Tabs -->
+        <div class="tabs-wrapper">
+            <div class="tabs-container" id="tabs-container">
+                <div class="tab-slider" id="tab-slider"></div>
+                <button class="tab-btn active" onclick="showTab(0)" data-tab="0">
+                    All Statements
+                </button>
+                <button class="tab-btn" onclick="showTab(1)" data-tab="1">
+                    Vertical Analysis (%)
+                </button>
+                <button class="tab-btn" onclick="showTab(2)" data-tab="2">
+                    Horizontal Analysis
+                </button>
             </div>
         </div>
 
@@ -92,111 +429,327 @@
             <!-- Injected via JS -->
         </div>
 
+        <!-- Footer -->
+        <footer class="page-footer">
+            <div>
+                Nguồn dữ liệu: Báo cáo tài chính kiểm toán CTCP Nhựa Bình Minh (HoSE: BMP) — Đơn vị: Tỷ VND
+            </div>
+            <div style="margin-top: 0.4rem;">
+                Built by <a href="#">VIETCHUONG</a>
+                <span class="footer-divider">|</span>
+                Disclaimer: Dữ liệu chỉ mang tính chất tham khảo, không phải khuyến nghị đầu tư.
+            </div>
+        </footer>
+
     </div>
 
     <script>
-        let currentTab = 0; // 0: Raw, 1: Vertical, 2: Horizontal
+        let currentTab = 0;
 
-        function render() {
+        // ============================================
+        // KPI Summary Cards
+        // ============================================
+        function renderKPIs() {
+            const is = FULL_FINANCIAL_TABLES[0]; // Income Statement
+            const bs = FULL_FINANCIAL_TABLES[1]; // Balance Sheet
+            const years = is.headers;
+            const lastIdx = years.length - 1;
+            const prevIdx = lastIdx - 1;
+
+            // Helper: get row values
+            function getRow(table, label) {
+                return table.rows.find(r => r.label === label);
+            }
+
+            const revenue = getRow(is, 'Doanh thu thuần');
+            const grossProfit = getRow(is, 'Lợi nhuận gộp');
+            const netProfit = getRow(is, 'Lợi nhuận sau thuế');
+            const totalAssets = bs.rows.find(r => r.label.includes('TỔNG TÀI SẢN'));
+            const equity = bs.rows.find(r => r.label.includes('VỐN CHỦ SỞ HỮU'));
+
+            // ROE calculation
+            const roe = netProfit.values[lastIdx] / equity.values[lastIdx] * 100;
+            const roePrev = netProfit.values[prevIdx] / equity.values[prevIdx] * 100;
+
+            // Gross Margin
+            const gm = grossProfit.values[lastIdx] / revenue.values[lastIdx] * 100;
+            const gmPrev = grossProfit.values[prevIdx] / revenue.values[prevIdx] * 100;
+
+            const kpis = [
+                {
+                    label: 'Doanh thu thuần',
+                    value: revenue.values[lastIdx],
+                    prev: revenue.values[prevIdx],
+                    suffix: ' Tỷ',
+                    isPercent: false
+                },
+                {
+                    label: 'Biên lợi nhuận gộp',
+                    value: gm,
+                    prev: gmPrev,
+                    suffix: '%',
+                    isPercent: true
+                },
+                {
+                    label: 'Lợi nhuận sau thuế',
+                    value: netProfit.values[lastIdx],
+                    prev: netProfit.values[prevIdx],
+                    suffix: ' Tỷ',
+                    isPercent: false
+                },
+                {
+                    label: 'Tổng tài sản',
+                    value: totalAssets.values[lastIdx],
+                    prev: totalAssets.values[prevIdx],
+                    suffix: ' Tỷ',
+                    isPercent: false
+                },
+                {
+                    label: `ROE (${years[lastIdx]})`,
+                    value: roe,
+                    prev: roePrev,
+                    suffix: '%',
+                    isPercent: true
+                }
+            ];
+
+            const bar = document.getElementById('kpi-bar');
+            bar.innerHTML = kpis.map((kpi, i) => {
+                const change = kpi.isPercent
+                    ? (kpi.value - kpi.prev).toFixed(1)
+                    : (((kpi.value - kpi.prev) / Math.abs(kpi.prev)) * 100).toFixed(1);
+                const isUp = parseFloat(change) >= 0;
+                const displayValue = kpi.isPercent ? kpi.value.toFixed(1) : kpi.value.toLocaleString('en-US');
+                const arrow = isUp ? '▲' : '▼';
+                const trendClass = isUp ? 'up' : 'down';
+                const changeDisplay = kpi.isPercent
+                    ? `${isUp ? '+' : ''}${change} pp`
+                    : `${isUp ? '+' : ''}${change}%`;
+
+                return `
+                    <div class="kpi-card" style="animation-delay: ${i * 0.08}s">
+                        <div class="kpi-label">${kpi.label}</div>
+                        <div class="kpi-value count-animate" style="animation-delay: ${0.3 + i * 0.1}s">${displayValue}${kpi.suffix}</div>
+                        <div class="kpi-trend ${trendClass}">${arrow} ${changeDisplay} YoY</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // Sparkline SVG Generator
+        // ============================================
+        function createSparkline(values, width = 70, height = 24) {
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const range = max - min || 1;
+            const padding = 2;
+
+            const points = values.map((v, i) => {
+                const x = padding + (i / (values.length - 1)) * (width - padding * 2);
+                const y = height - padding - ((v - min) / range) * (height - padding * 2);
+                return `${x},${y}`;
+            });
+
+            // Determine color based on trend
+            const trend = values[values.length - 1] - values[0];
+            const color = trend >= 0 ? 'var(--success)' : 'var(--danger)';
+
+            // Create gradient area
+            const areaPoints = [`${padding},${height - padding}`, ...points, `${width - padding},${height - padding}`].join(' ');
+
+            return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+                <defs>
+                    <linearGradient id="sg${Math.random().toString(36).slice(2)}" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
+                        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+                    </linearGradient>
+                </defs>
+                <polygon points="${areaPoints}" fill="url(#sg${Math.random().toString(36).slice(2)})" opacity="0.5"/>
+                <polyline points="${points.join(' ')}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="${points[points.length - 1].split(',')[0]}" cy="${points[points.length - 1].split(',')[1]}" r="2" fill="${color}"/>
+            </svg>`;
+        }
+
+        // Better sparkline with unique gradient IDs
+        function createSparklineSVG(values, width = 70, height = 24) {
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const range = max - min || 1;
+            const padding = 3;
+            const uid = 'sp' + Math.random().toString(36).slice(2, 8);
+
+            const coords = values.map((v, i) => {
+                const x = padding + (i / (values.length - 1)) * (width - padding * 2);
+                const y = height - padding - ((v - min) / range) * (height - padding * 2);
+                return { x, y };
+            });
+
+            const linePoints = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+            const areaPoints = `${padding},${height - padding} ${linePoints} ${width - padding},${height - padding}`;
+
+            const trend = values[values.length - 1] - values[0];
+            const color = trend >= 0 ? '#3fb950' : '#f85149';
+
+            const last = coords[coords.length - 1];
+
+            return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" style="overflow:visible">
+                <defs>
+                    <linearGradient id="${uid}" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="${color}" stop-opacity="0.25"/>
+                        <stop offset="100%" stop-color="${color}" stop-opacity="0.02"/>
+                    </linearGradient>
+                </defs>
+                <polygon points="${areaPoints}" fill="url(#${uid})"/>
+                <polyline points="${linePoints}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="2.5" fill="${color}" stroke="#161b22" stroke-width="1"/>
+            </svg>`;
+        }
+
+
+
+        // ============================================
+        // Main Render
+        // ============================================
+        function render(animate = true) {
             const container = document.getElementById('financial-content');
-            container.innerHTML = '';
 
-            FULL_FINANCIAL_TABLES.forEach((table, tableIdx) => {
-                const section = document.createElement('section');
-                section.className = 'card';
-                section.style.marginBottom = '2rem';
+            if (animate) {
+                container.classList.add('fade-out');
+            }
 
-                // Header
-                const header = document.createElement('div');
-                header.className = 'card-header';
-                header.textContent = table.title;
-                section.appendChild(header);
+            const doRender = () => {
+                container.innerHTML = '';
 
-                // Wrapper
-                const wrapper = document.createElement('div');
-                wrapper.style.overflowX = 'auto';
+                FULL_FINANCIAL_TABLES.forEach((table, tableIdx) => {
+                    const section = document.createElement('section');
+                    section.className = 'statement-card';
+                    section.style.animationDelay = `${0.1 + tableIdx * 0.12}s`;
 
-                // Table
-                const tbl = document.createElement('table');
-                tbl.className = 'data-table';
+                    // Header with icon
+                    const header = document.createElement('div');
+                    header.className = 'card-header';
+                    header.textContent = table.title;
+                    section.appendChild(header);
 
-                // THead
-                const thead = document.createElement('thead');
-                const headRow = document.createElement('tr');
-                headRow.innerHTML = `<th>Item</th>` + table.headers.map(h => `<th>${h}</th>`).join('');
-                thead.appendChild(headRow);
-                tbl.appendChild(thead);
+                    // Table Wrapper
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'table-wrapper';
 
-                // TBody
-                const tbody = document.createElement('tbody');
+                    // Table
+                    const tbl = document.createElement('table');
+                    tbl.className = 'data-table';
 
-                table.rows.forEach(row => {
-                    const tr = document.createElement('tr');
-
-                    let valsHtml = '';
-
-                    // Raw Data
+                    // THead — add Trend column for raw data
+                    const thead = document.createElement('thead');
+                    const headRow = document.createElement('tr');
+                    let headerHtml = `<th style="text-align:left">Item</th>` + table.headers.map(h => `<th>${h}</th>`).join('');
                     if (currentTab === 0) {
-                        valsHtml = row.values.map(v => `<td>${v.toLocaleString('en-US')}</td>`).join('');
+                        headerHtml += `<th style="text-align:center">Trend</th>`;
                     }
-                    // Vertical Analysis (Common Size)
-                    else if (currentTab === 1) {
-                        // Base logic: 
-                        // IS -> % of Revenue (row index 0)
-                        // BS -> % of Total Assets (Need to find Total Assets row)
-                        // CF -> N/A usually or % of Revenue
+                    headRow.innerHTML = headerHtml;
+                    thead.appendChild(headRow);
+                    tbl.appendChild(thead);
 
-                        let baseValues;
-                        if (table.title.includes("Income")) baseValues = table.rows[0].values; // Revenue
-                        else if (table.title.includes("Balance")) {
-                            // Find Total Assets
-                            const assetsRow = table.rows.find(r => r.label.toLowerCase().includes("tổng tài sản"));
-                            baseValues = assetsRow ? assetsRow.values : null;
-                        }
+                    // TBody
+                    const tbody = document.createElement('tbody');
 
-                        if (baseValues) {
-                            valsHtml = row.values.map((v, i) => {
-                                if (baseValues[i] === 0) return '<td>-</td>';
-                                const pct = (v / baseValues[i]) * 100;
-                                return `<td>${pct.toFixed(1)}%</td>`;
+                    table.rows.forEach((row, rowIdx) => {
+                        const tr = document.createElement('tr');
+
+                        let valsHtml = '';
+
+                        // Raw Data
+                        if (currentTab === 0) {
+                            valsHtml = row.values.map(v => {
+                                const formatted = v.toLocaleString('en-US');
+                                const cls = v < 0 ? 'val-negative' : '';
+                                return `<td class="${cls}">${formatted}</td>`;
                             }).join('');
-                        } else {
-                            valsHtml = row.values.map(v => `<td>-</td>`).join('');
+                            // Add sparkline
+                            valsHtml += `<td class="sparkline-cell">${createSparklineSVG(row.values)}</td>`;
                         }
-                    }
-                    // Horizontal Analysis (YoY Growth)
-                    else if (currentTab === 2) {
-                        valsHtml = row.values.map((v, i) => {
-                            if (i === 0) return '<td>-</td>';
-                            const prev = row.values[i - 1];
-                            if (prev === 0) return '<td>-</td>';
-                            const growth = ((v - prev) / Math.abs(prev)) * 100;
+                        // Vertical Analysis (Common Size)
+                        else if (currentTab === 1) {
+                            let baseValues;
+                            if (table.title.includes("Income")) baseValues = table.rows[0].values;
+                            else if (table.title.includes("Balance")) {
+                                const assetsRow = table.rows.find(r => r.label.toLowerCase().includes("tổng tài sản"));
+                                baseValues = assetsRow ? assetsRow.values : null;
+                            }
 
-                            let color = 'var(--text-primary)';
-                            if (growth > 0) color = 'var(--accent-success)';
-                            if (growth < 0) color = 'var(--accent-danger)';
+                            if (baseValues) {
+                                const pctValues = [];
+                                valsHtml = row.values.map((v, i) => {
+                                    if (baseValues[i] === 0) { pctValues.push(0); return '<td>-</td>'; }
+                                    const pct = (v / baseValues[i]) * 100;
+                                    pctValues.push(pct);
+                                    return `<td>${pct.toFixed(1)}%</td>`;
+                                }).join('');
+                            } else {
+                                valsHtml = row.values.map(v => `<td>-</td>`).join('');
+                            }
+                        }
+                        // Horizontal Analysis (YoY Growth)
+                        else if (currentTab === 2) {
+                            valsHtml = row.values.map((v, i) => {
+                                if (i === 0) return '<td style="color:var(--text-sub)">—</td>';
+                                const prev = row.values[i - 1];
+                                if (prev === 0) return '<td>-</td>';
+                                const growth = ((v - prev) / Math.abs(prev)) * 100;
 
-                            return `<td style="color:${color}">${growth > 0 ? '+' : ''}${growth.toFixed(1)}%</td>`;
-                        }).join('');
-                    }
+                                let cls = '';
+                                let arrow = '';
+                                if (growth > 0) { cls = 'val-positive'; arrow = '▲ '; }
+                                if (growth < 0) { cls = 'val-negative'; arrow = '▼ '; }
 
-                    // Determine row style
-                    const labelLower = row.label.toLowerCase();
-                    const isTotal = labelLower.includes('tổng') || labelLower.includes('total') || labelLower.includes('lợi nhuận');
-                    const isSection = row.label === row.label.toUpperCase() && !row.label.match(/\d/); // Simple heuristic: All caps = section
+                                return `<td class="${cls}">${arrow}${growth > 0 ? '+' : ''}${growth.toFixed(1)}%</td>`;
+                            }).join('');
+                        }
 
-                    if (isSection) tr.classList.add('row-section');
-                    if (isTotal) tr.classList.add('row-total');
+                        // Determine row style
+                        const labelLower = row.label.toLowerCase();
+                        const isTotal = labelLower.includes('tổng') || labelLower.includes('total') || labelLower.includes('lợi nhuận');
+                        const isSection = row.label === row.label.toUpperCase() && !row.label.match(/\d/);
 
-                    tr.innerHTML = `<td style="${isTotal || isSection ? 'color: inherit' : 'color: var(--text-main)'}">${row.label}</td>` + valsHtml;
-                    tbody.appendChild(tr);
+                        if (isSection) tr.classList.add('row-section');
+                        if (isTotal) tr.classList.add('row-total');
+
+                        const labelStyle = isTotal ? 'font-weight:700; color: #79c0ff' : isSection ? 'font-weight:600; color: var(--accent)' : 'color: var(--text-main)';
+                        tr.innerHTML = `<td style="text-align:left; ${labelStyle}">${row.label}</td>` + valsHtml;
+                        tbody.appendChild(tr);
+                    });
+
+                    tbl.appendChild(tbody);
+                    wrapper.appendChild(tbl);
+                    section.appendChild(wrapper);
+                    container.appendChild(section);
                 });
 
-                tbl.appendChild(tbody);
-                wrapper.appendChild(tbl);
-                section.appendChild(wrapper);
-                container.appendChild(section);
-            });
+                if (animate) {
+                    container.classList.remove('fade-out');
+                }
+            };
+
+            if (animate) {
+                setTimeout(doRender, 280);
+            } else {
+                doRender();
+            }
+        }
+
+        // ============================================
+        // Tab Slider Animation
+        // ============================================
+        function updateSlider(idx) {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const slider = document.getElementById('tab-slider');
+            const target = tabs[idx];
+
+            if (!target || !slider) return;
+
+            slider.style.width = target.offsetWidth + 'px';
+            slider.style.left = target.offsetLeft + 'px';
         }
 
         function showTab(idx) {
@@ -205,10 +758,25 @@
                 if (i === idx) b.classList.add('active');
                 else b.classList.remove('active');
             });
-            render();
+            updateSlider(idx);
+            render(true);
         }
 
-        render();
+        // ============================================
+        // Init
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            renderKPIs();
+            render(false);
+
+            // Initialize slider position
+            requestAnimationFrame(() => {
+                updateSlider(0);
+            });
+
+            // Update slider on window resize
+            window.addEventListener('resize', () => updateSlider(currentTab));
+        });
 
     </script>
 </body>

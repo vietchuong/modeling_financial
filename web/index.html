@@ -4,7 +4,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Valuation Dashboard - BMP</title>
+  <title>Valuation Dashboard - BMP | DCF Model</title>
+  <meta name="description"
+    content="Interactive DCF Valuation Model for CTCP Nhựa Bình Minh (BMP) with Monte Carlo simulation and sensitivity analysis.">
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,40 +19,6 @@
   <script src="data/financials.js"></script>
   <!-- Styles -->
   <link rel="stylesheet" href="css/style.css">
-  <style>
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
-
-    .heatmap {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 2px;
-      background: var(--bg);
-      border: 1px solid var(--panel-border);
-    }
-
-    .heatmap-cell {
-      background: var(--panel);
-      padding: 0.5rem;
-      text-align: center;
-      font-size: 0.8rem;
-      font-family: var(--font-mono);
-    }
-
-    .heatmap-header {
-      background: #21262d;
-      color: var(--text-sub);
-      font-weight: 600;
-    }
-
-    .heatmap-val {
-      color: var(--text-main);
-    }
-  </style>
 </head>
 
 <body>
@@ -58,7 +26,8 @@
   <header>
     <div class="brand">
       <span>VIETCHUONG.</span>
-      <span style="font-weight:400; color:var(--text-sub); margin-left: 1rem; font-size: 0.9rem;">CTCP Nhựa Bình Minh
+      <span style="font-weight:400; color:var(--text-sub); margin-left: 0.75rem; font-size: 0.85rem;">CTCP Nhựa Bình
+        Minh
         (BMP)</span>
     </div>
 
@@ -72,53 +41,92 @@
 
   <div class="container">
     <!-- Sidebar Inputs -->
-    <aside class="sidebar">
-      <h3 style="margin-bottom: 1.5rem; font-size: 0.9rem; text-transform: uppercase; color: var(--text-sub);">
-        Model Assumptions</h3>
+    <aside class="sidebar" id="sidebar">
+      <h3>Model Assumptions</h3>
 
-      <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem;">
+      <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem;" class="scenario-btns">
         <button class="scenario-btn active" onclick="setScenario('base')" style="flex: 1;">Base</button>
         <button class="scenario-btn" onclick="setScenario('bull')" style="flex: 1;">Bull</button>
         <button class="scenario-btn" onclick="setScenario('bear')" style="flex: 1;">Bear</button>
       </div>
 
       <div class="input-group">
-        <label>Revenue Growth <span class="val" id="val-growth">5.0%</span></label>
+        <label>
+          <span class="label-text">
+            Revenue Growth
+            <span class="input-tooltip">
+              <span class="tooltip-icon">?</span>
+              <span class="tooltip-text">Tốc độ tăng trưởng doanh thu hàng năm</span>
+            </span>
+          </span>
+          <span class="val" id="val-growth">5.0%</span>
+        </label>
         <input type="range" id="growth" min="-10" max="20" step="0.5" value="5">
       </div>
 
       <div class="input-group">
-        <label>EBITDA Margin <span class="val" id="val-margin">24.0%</span></label>
+        <label>
+          <span class="label-text">
+            EBITDA Margin
+            <span class="input-tooltip">
+              <span class="tooltip-icon">?</span>
+              <span class="tooltip-text">Biên lợi nhuận EBITDA trên doanh thu</span>
+            </span>
+          </span>
+          <span class="val" id="val-margin">24.0%</span>
+        </label>
         <input type="range" id="margin" min="10" max="40" step="0.5" value="24">
       </div>
 
       <div class="input-group">
-        <label>WACC <span class="val" id="val-wacc">12.0%</span></label>
+        <label>
+          <span class="label-text">
+            WACC
+            <span class="input-tooltip">
+              <span class="tooltip-icon">?</span>
+              <span class="tooltip-text">Chi phí sử dụng vốn bình quân gia quyền</span>
+            </span>
+          </span>
+          <span class="val" id="val-wacc">12.0%</span>
+        </label>
         <input type="range" id="wacc" min="5" max="20" step="0.1" value="12">
       </div>
 
       <div class="input-group">
-        <label>Terminal Growth <span class="val" id="val-term">2.0%</span></label>
+        <label>
+          <span class="label-text">
+            Terminal Growth
+            <span class="input-tooltip">
+              <span class="tooltip-icon">?</span>
+              <span class="tooltip-text">Tỷ lệ tăng trưởng vĩnh viễn sau giai đoạn dự phóng</span>
+            </span>
+          </span>
+          <span class="val" id="val-term">2.0%</span>
+        </label>
         <input type="range" id="terminal" min="0" max="5" step="0.1" value="2">
       </div>
 
       <div class="input-group">
-        <label>Tax Rate <span class="val" id="val-tax">20.0%</span></label>
+        <label>
+          <span class="label-text">
+            Tax Rate
+            <span class="input-tooltip">
+              <span class="tooltip-icon">?</span>
+              <span class="tooltip-text">Thuế suất thuế thu nhập doanh nghiệp</span>
+            </span>
+          </span>
+          <span class="val" id="val-tax">20.0%</span>
+        </label>
         <input type="range" id="tax" min="0" max="30" step="1" value="20">
       </div>
 
-      <div style="margin-top: 2rem; border-top: 1px solid var(--panel-border); padding-top: 1rem;">
-        <h4 style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-sub);">Simulation Controls</h4>
-        <button class="scenario-btn" style="width: 100%; text-align: center;" onclick="runMonteCarlo()">Rerun
-          Simulation</button>
-      </div>
     </aside>
 
     <!-- Main Dashboard -->
     <main class="main-content">
       <!-- Hero Metrics -->
       <section class="valuation-hero">
-        <div class="hero-metric">
+        <div class="hero-metric primary">
           <div class="hero-label">Implied Share Price</div>
           <div class="hero-value" id="share-price">---</div>
           <div class="hero-sub" id="upside">---</div>
@@ -150,9 +158,9 @@
           </div>
           <div
             style="margin-top: 10px; font-size: 0.8rem; display: flex; justify-content: space-between; color: var(--text-sub);">
-            <span>Min: <span id="mc-min" class="num-cell">---</span></span>
-            <span>Mean: <span id="mc-mean" class="num-cell">---</span></span>
-            <span>Max: <span id="mc-max" class="num-cell">---</span></span>
+            <span>Min: <span id="mc-min" class="num-cell" style="color: var(--danger);">---</span></span>
+            <span>Mean: <span id="mc-mean" class="num-cell" style="color: var(--accent);">---</span></span>
+            <span>Max: <span id="mc-max" class="num-cell" style="color: var(--success);">---</span></span>
           </div>
         </section>
       </div>
@@ -162,8 +170,9 @@
         <section class="card">
           <div class="card-header">Sensitivity Analysis (Price in VND)</div>
           <div id="sensitivity-heatmap" class="heatmap"></div>
-          <div style="margin-top: 10px; text-align: center; font-size: 0.8rem; color: var(--text-sub);">
-            Rows: WACC (%) | Cols: Terminal Growth (%)
+          <div style="margin-top: 10px; text-align: center; font-size: 0.78rem; color: var(--text-dim);">
+            Rows: WACC (%) &nbsp;|&nbsp; Cols: Terminal Growth (%) &nbsp;·&nbsp;
+            <span style="color: var(--accent);">■</span> Base Case
           </div>
         </section>
         <section class="card">
@@ -182,8 +191,67 @@
         </section>
       </div>
 
+      <!-- Valuation Summary Box -->
+      <section class="valuation-summary">
+        <div class="card-header">Valuation Summary</div>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="summary-label">PV of FCFs</span>
+            <span class="summary-value" id="sum-pv-fcf">---</span>
+            <span class="summary-note">Discounted cash flows (5Y)</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">PV of Terminal Value</span>
+            <span class="summary-value" id="sum-pv-tv">---</span>
+            <span class="summary-note">Gordon growth model</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Enterprise Value</span>
+            <span class="summary-value" id="sum-ev">---</span>
+            <span class="summary-note">PV(FCF) + PV(TV)</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Net Cash / (Debt)</span>
+            <span class="summary-value" id="sum-net-cash">---</span>
+            <span class="summary-note">Cash − Total Debt</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Equity Value</span>
+            <span class="summary-value" id="sum-equity">---</span>
+            <span class="summary-note">EV + Cash − Debt</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Shares Outstanding</span>
+            <span class="summary-value" id="sum-shares">---</span>
+            <span class="summary-note">Million shares</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Implied Price / Share</span>
+            <span class="summary-value" id="sum-price" style="color: var(--accent);">---</span>
+            <span class="summary-note">Equity ÷ Shares</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Monte Carlo Mean</span>
+            <span class="summary-value" id="sum-mc-mean" style="color: var(--success);">---</span>
+            <span class="summary-note">1,000 iterations avg</span>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
+
+  <!-- Footer -->
+  <footer class="page-footer">
+    <div>
+      Nguồn dữ liệu: Báo cáo tài chính kiểm toán CTCP Nhựa Bình Minh (HoSE: BMP) — Đơn vị: Tỷ VND
+    </div>
+    <div style="margin-top: 0.4rem;">
+      Built by <a href="#">VIETCHUONG</a>
+      <span class="footer-divider">|</span>
+      Disclaimer: Dữ liệu chỉ mang tính chất tham khảo, không phải khuyến nghị đầu tư.
+    </div>
+  </footer>
 
   <!-- Logic -->
   <script src="js/app.js"></script>
