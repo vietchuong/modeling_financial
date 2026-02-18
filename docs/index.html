@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Valuation Dashboard - BMP</title>
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Data Inputs -->
+  <script src="data/financials.js"></script>
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .heatmap {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 2px;
+      background: var(--bg);
+      border: 1px solid var(--panel-border);
+    }
+
+    .heatmap-cell {
+      background: var(--panel);
+      padding: 0.5rem;
+      text-align: center;
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+    }
+
+    .heatmap-header {
+      background: #21262d;
+      color: var(--text-sub);
+      font-weight: 600;
+    }
+
+    .heatmap-val {
+      color: var(--text-main);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <span>Ag.</span> Valuation Dashboard
+      <span style="font-weight:400; color:var(--text-sub); margin-left: 1rem; font-size: 0.9rem;">CTCP Nhựa Bình Minh
+        (BMP)</span>
+    </div>
+
+    <div style="display: flex; gap: 2rem;">
+      <nav>
+        <a href="index.html" class="nav-link active">Valuation Model</a>
+        <a href="inputs.html" class="nav-link">Historical Data</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Sidebar Inputs -->
+    <aside class="sidebar">
+      <h3 style="margin-bottom: 1.5rem; font-size: 0.9rem; text-transform: uppercase; color: var(--text-sub);">
+        Model Assumptions</h3>
+
+      <div style="margin-bottom: 1.5rem; display: flex; gap: 0.5rem;">
+        <button class="scenario-btn active" onclick="setScenario('base')" style="flex: 1;">Base</button>
+        <button class="scenario-btn" onclick="setScenario('bull')" style="flex: 1;">Bull</button>
+        <button class="scenario-btn" onclick="setScenario('bear')" style="flex: 1;">Bear</button>
+      </div>
+
+      <div class="input-group">
+        <label>Revenue Growth <span class="val" id="val-growth">5.0%</span></label>
+        <input type="range" id="growth" min="-10" max="20" step="0.5" value="5">
+      </div>
+
+      <div class="input-group">
+        <label>EBITDA Margin <span class="val" id="val-margin">24.0%</span></label>
+        <input type="range" id="margin" min="10" max="40" step="0.5" value="24">
+      </div>
+
+      <div class="input-group">
+        <label>WACC <span class="val" id="val-wacc">12.0%</span></label>
+        <input type="range" id="wacc" min="5" max="20" step="0.1" value="12">
+      </div>
+
+      <div class="input-group">
+        <label>Terminal Growth <span class="val" id="val-term">2.0%</span></label>
+        <input type="range" id="terminal" min="0" max="5" step="0.1" value="2">
+      </div>
+
+      <div class="input-group">
+        <label>Tax Rate <span class="val" id="val-tax">20.0%</span></label>
+        <input type="range" id="tax" min="0" max="30" step="1" value="20">
+      </div>
+
+      <div style="margin-top: 2rem; border-top: 1px solid var(--panel-border); padding-top: 1rem;">
+        <h4 style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-sub);">Simulation Controls</h4>
+        <button class="scenario-btn" style="width: 100%; text-align: center;" onclick="runMonteCarlo()">Rerun
+          Simulation</button>
+      </div>
+    </aside>
+
+    <!-- Main Dashboard -->
+    <main class="main-content">
+      <!-- Hero Metrics -->
+      <section class="valuation-hero">
+        <div class="hero-metric">
+          <div class="hero-label">Implied Share Price</div>
+          <div class="hero-value" id="share-price">---</div>
+          <div class="hero-sub" id="upside">---</div>
+        </div>
+        <div class="hero-metric">
+          <div class="hero-label">Enterprise Value</div>
+          <div class="hero-value" id="ev-value">---</div>
+          <div class="hero-sub">Bn VND</div>
+        </div>
+        <div class="hero-metric">
+          <div class="hero-label">Equity Value</div>
+          <div class="hero-value" id="equity-value">---</div>
+          <div class="hero-sub">Bn VND</div>
+        </div>
+      </section>
+
+      <!-- Charts Row 1 -->
+      <div class="grid-2">
+        <section class="card">
+          <div class="card-header">DCF Projections (5Y)</div>
+          <div style="position: relative; height: 300px;">
+            <canvas id="dcfChart"></canvas>
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-header">Monte Carlo Simulation (1000 Iterations)</div>
+          <div style="position: relative; height: 300px;">
+            <canvas id="monteCarloChart"></canvas>
+          </div>
+          <div
+            style="margin-top: 10px; font-size: 0.8rem; display: flex; justify-content: space-between; color: var(--text-sub);">
+            <span>Min: <span id="mc-min" class="num-cell">---</span></span>
+            <span>Mean: <span id="mc-mean" class="num-cell">---</span></span>
+            <span>Max: <span id="mc-max" class="num-cell">---</span></span>
+          </div>
+        </section>
+      </div>
+
+      <!-- Analysis Row 2 -->
+      <div class="grid-2">
+        <section class="card">
+          <div class="card-header">Sensitivity Analysis (Price in VND)</div>
+          <div id="sensitivity-heatmap" class="heatmap"></div>
+          <div style="margin-top: 10px; text-align: center; font-size: 0.8rem; color: var(--text-sub);">
+            Rows: WACC (%) | Cols: Terminal Growth (%)
+          </div>
+        </section>
+        <section class="card">
+          <div class="card-header">Financial Forecast (Bn VND)</div>
+          <table class="data-table" id="forecast-table">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Revenue</th>
+                <th>EBITDA</th>
+                <th>FCF</th>
+              </tr>
+            </thead>
+            <tbody><!-- JS --></tbody>
+          </table>
+        </section>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Logic -->
+  <script src="js/app.js"></script>
+</body>
+
+</html>
