@@ -496,8 +496,9 @@ Object.values(els.inputs).forEach(input => {
 
 // --- Scenarios ---
 window.setScenario = (type) => {
+    const btn = event.currentTarget;
     document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
-    event.target.classList.add('active');
+    btn.classList.add('active');
 
     if (type === 'base') {
         els.inputs.growth.value = 5.0;
@@ -516,15 +517,6 @@ window.setScenario = (type) => {
     Object.values(els.inputs).forEach(slider => updateSliderFill(slider));
     updateAll();
 };
-
-// --- Mobile Sidebar Toggle ---
-const sidebar = document.getElementById('sidebar');
-const sidebarToggle = document.querySelector('.sidebar-toggle');
-if (sidebarToggle) {
-    sidebarToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
-    });
-}
 
 // ============================
 // TAB 2: FINANCIAL ANALYSIS
